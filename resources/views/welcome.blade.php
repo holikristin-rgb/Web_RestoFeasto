@@ -1,7 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-<!-- Hero Section -->
 <section class="container mx-auto px-6 mt-8">
     <div class="relative w-full h-[400px] rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center border-b-8 border-orange-600">
         <div class="absolute inset-0 bg-[#4A2C2A]"></div>
@@ -26,20 +25,23 @@
                     <a href="{{ route('register') }}" class="bg-orange-600 hover:bg-orange-700 text-white px-8 py-3.5 rounded-full font-bold transition transform hover:-translate-y-1 shadow-lg text-sm uppercase tracking-wider">
                         Daftar Akun
                     </a>
-                    <a href="#menu-section" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-8 py-3.5 rounded-full font-bold transition transform hover:-translate-y-1 text-sm uppercase tracking-wider">
+                    <a href="{{ route('login') }}" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-8 py-3.5 rounded-full font-bold transition transform hover:-translate-y-1 text-sm uppercase tracking-wider">
                         Lihat Menu
                     </a>
                 </div>
             @else
-                <a href="#menu-section" class="bg-orange-600 hover:bg-orange-700 text-white px-10 py-4 rounded-full font-bold transition transform hover:-translate-y-1 shadow-lg text-sm uppercase tracking-wider">
-                    Lihat Menu Hari Ini
-                </a>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="#menu-section" class="bg-orange-600 hover:bg-orange-700 text-white px-10 py-4 rounded-full font-bold transition transform hover:-translate-y-1 shadow-lg text-sm uppercase tracking-wider">
+                        Lihat Menu Hari Ini
+                    </a>
+                </div>
             @endif
         </div>
     </div>
 </section>
 
-<!-- Menu Section -->
+{{-- Section menu ini hanya akan muncul jika user sudah login --}}
+@auth
 <section id="menu-section" class="container mx-auto px-6 py-16 scroll-mt-20">
     <div class="text-center mb-12">
         <h2 class="text-3xl md:text-4xl font-serif font-bold text-[#4A2C2A] uppercase tracking-widest">Menu Nusantara</h2>
@@ -47,11 +49,10 @@
         <div class="h-1 w-20 bg-orange-600 mx-auto mt-4 rounded-full"></div>
     </div>
 
-    <!-- Category Tabs -->
     <div class="flex flex-wrap justify-center gap-3 mb-12">
         <a href="{{ Auth::check() ? route('beranda') : route('index') }}#menu-section" 
            class="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition duration-300 shadow-sm {{ !$selected_category ? 'bg-orange-600 text-white' : 'bg-white text-gray-500 hover:bg-orange-50 hover:text-orange-600 border border-gray-100' }}">
-            Semua Menu
+           Semua Menu
         </a>
         @foreach($categories as $cat)
             <a href="{{ (Auth::check() ? route('beranda') : route('index')) }}?kategori={{ $cat->id_kategori }}#menu-section" 
@@ -61,38 +62,17 @@
         @endforeach
     </div>
 
-    <!-- Menu Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         @forelse($menus as $menu)
             @php
-                // If menu has uploaded image, use the backend storage url
                 if ($menu->gambar) {
                     $imageUrl = route('storage.file', ['path' => $menu->gambar]);
                 } else {
-                    // Map names to high-quality Unsplash food images to WOW the user
-                    $nameLower = strtolower($menu->nama_menu);
-                    $imageUrl = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=600'; // Default delicious food
-                    
-                    if (str_contains($nameLower, 'nasi goreng')) {
-                        $imageUrl = 'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&q=80&w=600';
-                    } elseif (str_contains($nameLower, 'sate')) {
-                        $imageUrl = 'https://images.unsplash.com/photo-1529042410759-befb1204b468?auto=format&fit=crop&q=80&w=600';
-                    } elseif (str_contains($nameLower, 'rendang')) {
-                        $imageUrl = 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&q=80&w=600';
-                    } elseif (str_contains($nameLower, 'es dawet') || str_contains($nameLower, 'dawet')) {
-                        $imageUrl = 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&q=80&w=600';
-                    } elseif (str_contains($nameLower, 'soto')) {
-                        $imageUrl = 'https://images.unsplash.com/photo-1626202133294-7622b62898b7?auto=format&fit=crop&q=80&w=600';
-                    } elseif (str_contains($nameLower, 'es teh') || str_contains($nameLower, 'teh')) {
-                        $imageUrl = 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&q=80&w=600';
-                    } elseif ($menu->id_kategori == 2) { // Drink category fallback
-                        $imageUrl = 'https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&q=80&w=600';
-                    }
+                    $imageUrl = asset('images/default-menu.jpg'); 
                 }
             @endphp
 
             <div class="group bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1.5 transition duration-500 flex flex-col h-full">
-                <!-- Menu Image -->
                 <div class="h-52 w-full bg-gray-100 relative overflow-hidden">
                     <img src="{{ $imageUrl }}" alt="{{ $menu->nama_menu }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
@@ -101,7 +81,6 @@
                     </div>
                 </div>
 
-                <!-- Card Content -->
                 <div class="p-6 flex flex-col flex-grow">
                     <h3 class="text-xl font-bold text-[#4A2C2A] mb-2 group-hover:text-orange-600 transition">{{ $menu->nama_menu }}</h3>
                     <p class="text-gray-500 text-xs line-clamp-3 mb-6 font-light leading-relaxed flex-grow">{{ $menu->deskripsi }}</p>
@@ -126,12 +105,7 @@
                                     <span class="inline-block bg-red-100 text-red-700 px-3 py-1.5 rounded-full text-xs font-bold uppercase">Habis</span>
                                 @endif
                             @elseif(Auth::check())
-                                <!-- Other roles cannot purchase -->
                                 <span class="text-xs font-bold text-gray-400 bg-gray-100 px-3 py-1.5 rounded-xl uppercase">Staff Mode</span>
-                            @else
-                                <a href="{{ route('login') }}" class="bg-gray-100 hover:bg-orange-100 hover:text-orange-600 text-gray-600 px-4 py-2.5 rounded-xl transition text-xs font-bold uppercase tracking-wider">
-                                    Login
-                                </a>
                             @endif
                         </div>
                     </div>
@@ -148,8 +122,8 @@
         @endforelse
     </div>
 </section>
+@endauth
 
-<!-- Testimonials Section -->
 @if(count($feedbacks) > 0)
 <section class="bg-gray-50/50 py-16 border-t border-b border-gray-100">
     <div class="container mx-auto px-6">
@@ -162,10 +136,9 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             @foreach($feedbacks as $fb)
                 <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative group hover:shadow-lg transition duration-300">
-                    <span class="absolute top-6 right-8 text-6xl text-orange-100 font-serif leading-none select-none group-hover:text-orange-200 transition">”</span>
+                    <span class="absolute top-6 right-8 text-6xl text-orange-100 font-serif Bird-none leading-none select-none group-hover:text-orange-200 transition">”</span>
                     
                     <div class="space-y-4">
-                        <!-- Rating Stars -->
                         <div class="flex text-yellow-400">
                             @for($i = 1; $i <= 5; $i++)
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 {{ $i <= $fb->rating ? 'fill-current text-yellow-400' : 'text-gray-200' }}" viewBox="0 0 20 20" fill="currentColor">
@@ -174,13 +147,11 @@
                             @endfor
                         </div>
 
-                        <!-- Comment -->
                         <p class="text-gray-600 text-xs italic leading-relaxed relative z-10">
                             "{{ $fb->komentar }}"
                         </p>
                     </div>
 
-                    <!-- User Info -->
                     <div class="flex items-center gap-3 mt-6 pt-4 border-t border-gray-50">
                         <div class="w-10 h-10 bg-orange-100 text-orange-700 font-bold rounded-full flex items-center justify-center text-sm uppercase">
                             {{ substr($fb->user->nama ?? 'P', 0, 1) }}

@@ -123,7 +123,7 @@
             <h2 class="font-serif text-2xl font-bold tracking-widest text-[#FFF5EE] mb-4">RESTOFEASTO</h2>
             <p class="text-xs text-gray-400 max-w-md mx-auto mb-6">Warisan cita rasa kuliner Nusantara legendaris dengan pelayanan digital terbaik.</p>
             <div class="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-400">
-                INFORMASI KONTAK | ALAMAT JAKARTA | &copy; 2026 RESTOFEASTO NUSANTARA
+                INFORMASI KONTAK | MEDAN | &copy; 2026 RESTOFEASTO NUSANTARA
             </div>
         </div>
     </footer>

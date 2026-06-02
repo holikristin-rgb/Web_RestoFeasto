@@ -1,8 +1,34 @@
 @extends('layouts.app')
 
 @section('content')
+@if(session('success'))
+    <div id="toast-success" class="fixed top-5 right-5 z-50 flex items-center w-full max-w-xs p-4 text-gray-500 bg-white rounded-2xl shadow-xl border border-gray-100 transition-all duration-500 transform translate-y-0" role="alert">
+        <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-green-500 bg-green-50 rounded-xl">
+            <svg class="w-4 h-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+        </div>
+        <div class="ms-3 text-xs font-bold text-gray-800">{{ session('success') }}</div>
+        <button type="button" onclick="document.getElementById('toast-success').remove()" class="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg p-1.5 inline-flex items-center justify-center h-8 w-8 transition">
+            <span class="sr-only">Close</span>
+            <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+            </svg>
+        </button>
+    </div>
+    <script>
+        // Otomatis menutup notifikasi setelah 4 detik
+        setTimeout(() => {
+            const toast = document.getElementById('toast-success');
+            if(toast) {
+                toast.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => toast.remove(), 500);
+            }
+        }, 4000);
+    </script>
+@endif
+
 <section class="container mx-auto px-6 py-12">
-    <!-- Header -->
     <div class="flex justify-between items-center mb-8 border-b border-gray-100 pb-6">
         <div>
             <h1 class="text-3xl font-bold text-[#4A2C2A]">Panel Admin RestoFeasto</h1>
@@ -13,7 +39,6 @@
         </div>
     </div>
 
-    <!-- Error validation banner -->
     @if($errors->any())
         <div class="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-2xl shadow-sm mb-6 text-xs font-semibold">
             <p class="font-bold mb-1">Terjadi kesalahan input:</p>
@@ -25,7 +50,6 @@
         </div>
     @endif
 
-    <!-- Tab Navigation -->
     <div class="flex border-b border-gray-200 mb-8 font-bold text-sm">
         <button onclick="switchTab('menu')" id="tab-menu" class="px-6 py-3 text-orange-600 border-b-2 border-orange-600 transition outline-none">Kelola Menu</button>
         <button onclick="switchTab('category')" id="tab-category" class="px-6 py-3 text-gray-500 hover:text-orange-600 transition outline-none">Kategori Menu</button>
@@ -35,10 +59,8 @@
         <button onclick="switchTab('settings')" id="tab-settings" class="px-6 py-3 text-gray-500 hover:text-orange-600 transition outline-none">Pengaturan Resto</button>
     </div>
 
-    <!-- ================== TAB 1: KELOLA MENU ================== -->
     <div id="section-menu" class="space-y-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Table of menus (left) -->
             <div class="lg:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
                 <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
                     <h2 class="font-bold text-xs uppercase text-[#4A2C2A] tracking-wider">Daftar Menu Hidangan</h2>
@@ -78,11 +100,9 @@
                                             <button onclick="openMenuEditModal('{{ $menu->menu_id }}', '{{ addslashes($menu->nama_menu) }}', '{{ $menu->id_kategori }}', '{{ $menu->harga }}', '{{ $menu->stok }}', '{{ addslashes($menu->deskripsi) }}')"
                                                     class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100">Edit</button>
                                             
-                                            <form action="{{ route('admin.menu.destroy', $menu->menu_id) }}" method="POST" onsubmit="return confirm('Hapus menu ini?')" class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 hover:text-red-800 font-bold bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">Hapus</button>
-                                            </form>
+                                            <button type="button" onclick="openDeleteModal('{{ route('admin.menu.destroy', $menu->menu_id) }}', '{{ addslashes($menu->nama_menu) }}')" class="text-red-600 hover:text-red-800 font-bold bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">
+                                                Hapus
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -96,7 +116,6 @@
                 </div>
             </div>
 
-            <!-- Form: Add Menu (right) -->
             <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4 h-fit">
                 <h3 class="text-sm font-bold text-[#4A2C2A] uppercase tracking-wider border-b border-gray-100 pb-3">Tambah Menu Baru</h3>
                 <form action="{{ route('admin.menu.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4 text-xs font-semibold text-gray-700">
@@ -145,7 +164,6 @@
         </div>
     </div>
 
-    <!-- ================== TAB 2: KELOLA KATEGORI ================== -->
     <div id="section-category" class="space-y-8 hidden">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
@@ -161,7 +179,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @forelse($categories as $cat)
+                        @foreach($categories as $cat)
                             <tr class="hover:bg-gray-50/50 transition">
                                 <td class="px-6 py-4 font-bold text-orange-600">#{{ $cat->id_kategori }}</td>
                                 <td class="px-6 py-4 text-gray-900 font-bold">{{ $cat->nama_kategori }}</td>
@@ -170,19 +188,13 @@
                                         <button onclick="openCategoryEditModal('{{ $cat->id_kategori }}', '{{ addslashes($cat->nama_kategori) }}')"
                                                 class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100">Edit</button>
                                         
-                                        <form action="{{ route('admin.category.destroy', $cat->id_kategori) }}" method="POST" onsubmit="return confirm('Hapus kategori ini? Semua menu dengan kategori ini juga akan terhapus.')" class="inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:text-red-800 font-bold bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">Hapus</button>
-                                        </form>
+                                        <button type="button" onclick="openDeleteModal('{{ route('admin.category.destroy', $cat->id_kategori) }}', 'Kategori {{ addslashes($cat->nama_kategori) }}')" class="text-red-600 hover:text-red-800 font-bold bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">
+                                            Hapus
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="3" class="py-12 text-center text-gray-500 font-medium">Belum ada kategori terdaftar.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -204,7 +216,6 @@
         </div>
     </div>
 
-    <!-- ================== TAB 3: KELOLA MEJA ================== -->
     <div id="section-table" class="space-y-8 hidden">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
@@ -221,7 +232,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @forelse($tables as $table)
+                        @foreach($tables as $table)
                             <tr class="hover:bg-gray-50/50 transition">
                                 <td class="px-6 py-4 font-bold text-[#4A2C2A]">{{ $table->nomor_meja }}</td>
                                 <td class="px-6 py-4">{{ $table->kapasitas }} Orang</td>
@@ -235,19 +246,13 @@
                                         <button onclick="openTableEditModal('{{ $table->meja_id }}', '{{ $table->nomor_meja }}', '{{ $table->kapasitas }}', '{{ $table->status }}')"
                                                 class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100">Edit</button>
                                         
-                                        <form action="{{ route('admin.table.destroy', $table->meja_id) }}" method="POST" onsubmit="return confirm('Hapus meja ini?')" class="inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-600 hover:text-red-800 font-bold bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">Hapus</button>
-                                        </form>
+                                        <button type="button" onclick="openDeleteModal('{{ route('admin.table.destroy', $table->meja_id) }}', 'Meja Nomor {{ $table->nomor_meja }}')" class="text-red-600 hover:text-red-800 font-bold bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">
+                                            Hapus
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="py-12 text-center text-gray-500 font-medium">Belum ada meja terdaftar.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -281,7 +286,6 @@
         </div>
     </div>
 
-    <!-- ================== TAB 4: REGSITRASI STAF ================== -->
     <div id="section-staff" class="space-y-8 hidden">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
@@ -299,7 +303,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        @forelse($staff as $st)
+                        @foreach($staff as $st)
                             <tr class="hover:bg-gray-50/50 transition">
                                 <td class="px-6 py-4 text-[#4A2C2A] font-bold">{{ $st->nama }}</td>
                                 <td class="px-6 py-4">{{ $st->email }}</td>
@@ -315,20 +319,14 @@
                                                 class="text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100">Edit</button>
                                         
                                         @if($st->email !== 'admin@restofeasto.com')
-                                            <form action="{{ route('admin.staff.destroy', $st->user_id) }}" method="POST" onsubmit="return confirm('Hapus staf ini?')" class="inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 hover:text-red-800 font-bold bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">Hapus</button>
-                                            </form>
+                                            <button type="button" onclick="openDeleteModal('{{ route('admin.staff.destroy', $st->user_id) }}', 'Staf {{ addslashes($st->nama) }}')" class="text-red-600 hover:text-red-800 font-bold bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">
+                                                Hapus
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="py-12 text-center text-gray-500 font-medium">Belum ada staf terdaftar.</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -372,7 +370,6 @@
         </div>
     </div>
 
-    <!-- ================== TAB 5: ULASAN PELANGGAN ================== -->
     <div id="section-feedback" class="space-y-8 hidden">
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
             <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
@@ -428,10 +425,8 @@
         </div>
     </div>
 
-    <!-- ================== TAB 6: PENGATURAN RESTO ================== -->
     <div id="section-settings" class="space-y-8 hidden">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- QRIS Upload Card -->
             <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 space-y-6">
                 <h3 class="text-lg font-bold text-[#4A2C2A] uppercase tracking-wider border-b border-gray-100 pb-3">QRIS Pembayaran</h3>
                 <p class="text-xs text-gray-500">Unggah kode QRIS aktif yang akan dipindai oleh pelanggan saat melakukan reservasi meja dan pemesanan menu.</p>
@@ -454,7 +449,6 @@
                 </form>
             </div>
 
-            <!-- Change Password Card (Self) -->
             <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 space-y-6">
                 <h3 class="text-lg font-bold text-[#4A2C2A] uppercase tracking-wider border-b border-gray-100 pb-3">Ubah Password Akun</h3>
                 <p class="text-xs text-gray-500">Ubah password akun Anda untuk menjaga keamanan akses ke panel kontrol.</p>
@@ -485,15 +479,11 @@
     </div>
 </section>
 
-<!-- ================== MODALS EDIT ================== -->
-
-<!-- 1. Menu Edit Modal -->
 <div id="modal-edit-menu" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div onclick="closeMenuEditModal()" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <div class="flex items-center justify-center min-h-screen p-4 text-center">
+        <div onclick="closeMenuEditModal()" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         
-        <div class="relative inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-gray-100">
+        <div class="relative inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-lg w-full border border-gray-100 z-10">
             <div class="bg-[#4A2C2A] px-6 py-4 flex justify-between items-center text-white">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-[#FFF5EE]">Ubah Menu Hidangan</h3>
                 <button onclick="closeMenuEditModal()" class="text-gray-400 hover:text-white transition text-xl">&times;</button>
@@ -545,13 +535,11 @@
     </div>
 </div>
 
-<!-- 2. Category Edit Modal -->
 <div id="modal-edit-category" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div onclick="closeCategoryEditModal()" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <div class="flex items-center justify-center min-h-screen p-4 text-center">
+        <div onclick="closeCategoryEditModal()" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         
-        <div class="relative inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-gray-100">
+        <div class="relative inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-md w-full border border-gray-100 z-10">
             <div class="bg-[#4A2C2A] px-6 py-4 flex justify-between items-center text-white">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-[#FFF5EE]">Ubah Kategori</h3>
                 <button onclick="closeCategoryEditModal()" class="text-gray-400 hover:text-white transition text-xl">&times;</button>
@@ -573,13 +561,11 @@
     </div>
 </div>
 
-<!-- 3. Table Edit Modal -->
 <div id="modal-edit-table" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div onclick="closeTableEditModal()" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <div class="flex items-center justify-center min-h-screen p-4 text-center">
+        <div onclick="closeTableEditModal()" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         
-        <div class="relative inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-gray-100">
+        <div class="relative inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-md w-full border border-gray-100 z-10">
             <div class="bg-[#4A2C2A] px-6 py-4 flex justify-between items-center text-white">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-[#FFF5EE]">Ubah Meja Makan</h3>
                 <button onclick="closeTableEditModal()" class="text-gray-400 hover:text-white transition text-xl">&times;</button>
@@ -613,13 +599,11 @@
     </div>
 </div>
 
-<!-- 4. Staff Edit Modal -->
 <div id="modal-edit-staff" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div onclick="closeStaffEditModal()" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+    <div class="flex items-center justify-center min-h-screen p-4 text-center">
+        <div onclick="closeStaffEditModal()" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         
-        <div class="relative inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full border border-gray-100">
+        <div class="relative inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-md w-full border border-gray-100 z-10">
             <div class="bg-[#4A2C2A] px-6 py-4 flex justify-between items-center text-white">
                 <h3 class="text-sm font-bold uppercase tracking-wider text-[#FFF5EE]">Ubah Data Staf</h3>
                 <button onclick="closeStaffEditModal()" class="text-gray-400 hover:text-white transition text-xl">&times;</button>
@@ -663,7 +647,36 @@
     </div>
 </div>
 
-<!-- Tab and Modal switching logic -->
+<div id="modal-delete-confirm" class="fixed inset-0 z-50 overflow-y-auto hidden" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen p-4 text-center">
+        <div onclick="closeDeleteModal()" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"></div>
+
+        <div class="relative inline-block align-middle bg-white rounded-3xl text-center overflow-hidden shadow-2xl transform transition-all max-w-sm w-full p-6 border border-gray-100 z-10">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-50 mb-4">
+                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+            </div>
+
+            <h3 class="text-base font-bold text-gray-900 mb-2">Konfirmasi Hapus</h3>
+            <p class="text-xs text-gray-500 mb-6">Apakah Anda yakin ingin menghapus <span id="delete-item-name" class="font-bold text-gray-800"></span>? Tindakan ini tidak dapat dibatalkan.</p>
+
+            <div class="flex gap-3 justify-center text-xs font-bold">
+                <button type="button" onclick="closeDeleteModal()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 px-4 rounded-xl transition">
+                    Batal
+                </button>
+                <form id="form-delete-confirm" action="" method="POST" class="w-full">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 px-4 rounded-xl transition shadow-sm">
+                        Ya, Hapus
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     function switchTab(tabName) {
         // Toggle sections
@@ -756,6 +769,16 @@
     }
     function closeStaffEditModal() {
         document.getElementById('modal-edit-staff').classList.add('hidden');
+    }
+
+    // 5. Custom Delete Modal Functions
+    function openDeleteModal(actionUrl, itemName) {
+        document.getElementById('form-delete-confirm').action = actionUrl;
+        document.getElementById('delete-item-name').innerText = itemName;
+        document.getElementById('modal-delete-confirm').classList.remove('hidden');
+    }
+    function closeDeleteModal() {
+        document.getElementById('modal-delete-confirm').classList.add('hidden');
     }
 </script>
 @endsection
