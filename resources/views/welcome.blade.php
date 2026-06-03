@@ -52,7 +52,7 @@
     <div class="flex flex-wrap justify-center gap-3 mb-12">
         <a href="{{ Auth::check() ? route('beranda') : route('index') }}#menu-section" 
            class="px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition duration-300 shadow-sm {{ !$selected_category ? 'bg-orange-600 text-white' : 'bg-white text-gray-500 hover:bg-orange-50 hover:text-orange-600 border border-gray-100' }}">
-           Semua Menu
+            Semua Menu
         </a>
         @foreach($categories as $cat)
             <a href="{{ (Auth::check() ? route('beranda') : route('index')) }}?kategori={{ $cat->id_kategori }}#menu-section" 
@@ -65,16 +65,22 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         @forelse($menus as $menu)
             @php
+                // PERBAIKAN: Langsung panggil menggunakan asset() karena file berada di public/menu/
                 if ($menu->gambar) {
-                    $imageUrl = route('storage.file', ['path' => $menu->gambar]);
+                    $imageUrl = asset($menu->gambar);
                 } else {
-                    $imageUrl = asset('images/default-menu.jpg'); 
+                    $imageUrl = asset('menu/default_menu.jpg'); 
                 }
             @endphp
 
             <div class="group bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1.5 transition duration-500 flex flex-col h-full">
                 <div class="h-52 w-full bg-gray-100 relative overflow-hidden">
-                    <img src="{{ $imageUrl }}" alt="{{ $menu->nama_menu }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500">
+                    {{-- Tambahan onerror untuk handle jika ada gambar yang salah ketik ekstensinya di DB --}}
+                    <img src="{{ $imageUrl }}" 
+                         alt="{{ $menu->nama_menu }}" 
+                         class="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+                         onerror="this.onerror=null; this.src='{{ asset('menu/default_menu.jpg') }}';">
+                    
                     <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
                     <div class="absolute top-4 right-4 bg-orange-600 text-white px-3.5 py-1 rounded-full text-[10px] font-bold shadow-md uppercase tracking-wider">
                         {{ $menu->kategori->nama_kategori ?? 'Menu' }}

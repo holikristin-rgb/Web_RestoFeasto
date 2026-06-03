@@ -14,6 +14,7 @@ use App\Http\Controllers\KasirController;
 */
 
 // --- 1. Halaman Publik ---
+// Memastikan route '/' dan 'beranda' konsisten menggunakan index
 Route::get('/', [CustomerController::class, 'index'])->name('index');
 
 // --- 2. Form Login & Registrasi ---
@@ -86,6 +87,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Change Password & Settings
     Route::post('/change-password', [AuthController::class, 'changePassword'])->name('change.password');
+    
+    // Update QRIS (Akses untuk Admin/Kasir)
     Route::post('/admin/settings/qris', [AdminController::class, 'updateQris'])->middleware('role:admin,kasir')->name('admin.settings.qris');
 
     // --- 5. GRUP ROUTE ADMIN ---
@@ -122,7 +125,7 @@ Route::middleware(['auth'])->group(function () {
 
 });
 
-//debug-foto bukti bayar
+// --- 7. Debug & Aset (Hanya untuk keperluan khusus) ---
 Route::get('/debug-db', function () {
     return response()->json([
         'database' => \DB::connection()->getDatabaseName(),
@@ -130,14 +133,8 @@ Route::get('/debug-db', function () {
     ]);
 });
 
-Route::get('/storage/{path}', function ($path) {
-    $fullPath = storage_path('app/public/' . $path);
-    if (!file_exists($fullPath)) {
-        abort(404);
-    }
-    return response()->file($fullPath);
-})->where('path', '.*');
-
+// Route storage manual hanya diaktifkan jika symlink tidak berjalan. 
+// Disarankan menggunakan link bawaan Laravel: asset('storage/path/file.jpg')
 Route::get('/storage-file/{path}', function ($path) {
     $fullPath = storage_path('app/public/' . $path);
     if (!file_exists($fullPath)) {

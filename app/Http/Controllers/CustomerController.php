@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+// Pastikan semua Model diimport dengan benar
 use App\Models\Menu;
 use App\Models\KategoriMenu;
 use App\Models\Meja;
@@ -12,20 +13,26 @@ use App\Models\Feedback;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB; // Tambahan untuk keamanan database
 
 class CustomerController extends Controller
 {
-    // Homepage catalog: lists menus and categories
+    /**
+     * Homepage catalog: lists menus and categories
+     */
     public function index(Request $request)
     {
         $selected_category = $request->query('kategori');
         $categories = KategoriMenu::all();
         
+        // Menggunakan query builder agar lebih rapi
+        $query = Menu::query();
+
         if ($selected_category) {
-            $menus = Menu::where('id_kategori', $selected_category)->get();
-        } else {
-            $menus = Menu::with('kategori')->get();
+            $query->where('id_kategori', $selected_category);
         }
+
+        $menus = $query->with('kategori')->get();
 
         $feedbacks = Feedback::with('user')
             ->orderBy('tanggal', 'desc')
@@ -41,31 +48,35 @@ class CustomerController extends Controller
         ]);
     }
 
-    // Add item to local session cart
+    /**
+     * Add item to local session cart
+     */
     public function cartAdd(Request $request)
     {
         $menuId = $request->menu_id;
-        $namaMenu = $request->nama_menu;
-        $harga = $request->harga;
-        $stok = $request->stok;
+        $menu = Menu::find($menuId); // Validasi menu ada di DB
+
+        if (!$menu) {
+            return response()->json(['message' => 'Menu tidak ditemukan.'], 404);
+        }
 
         $cart = session()->get('cart', []);
 
         if (isset($cart[$menuId])) {
-            if ($cart[$menuId]['qty'] + 1 > $stok) {
+            if ($cart[$menuId]['qty'] + 1 > $menu->stok) {
                 return response()->json(['message' => 'Stok menu tidak mencukupi.'], 400);
             }
             $cart[$menuId]['qty']++;
         } else {
-            if (1 > $stok) {
+            if ($menu->stok < 1) {
                 return response()->json(['message' => 'Stok menu kosong.'], 400);
             }
             $cart[$menuId] = [
-                'menu_id' => $menuId,
-                'nama_menu' => $namaMenu,
-                'harga' => $harga,
+                'menu_id' => $menu->menu_id,
+                'nama_menu' => $menu->nama_menu,
+                'harga' => $menu->harga,
                 'qty' => 1,
-                'stok' => $stok
+                'stok' => $menu->stok
             ];
         }
 
@@ -78,12 +89,10 @@ class CustomerController extends Controller
         ]);
     }
 
-    // Update cart item quantity
     public function cartUpdate(Request $request)
     {
         $menuId = $request->menu_id;
         $qty = $request->qty;
-        
         $cart = session()->get('cart', []);
 
         if (isset($cart[$menuId])) {
@@ -104,7 +113,6 @@ class CustomerController extends Controller
         ]);
     }
 
-    // Remove item from cart
     public function cartRemove(Request $request)
     {
         $menuId = $request->menu_id;
@@ -115,21 +123,16 @@ class CustomerController extends Controller
             session()->put('cart', $cart);
         }
 
-        return response()->json([
-            'message' => 'Menu dihapus dari keranjang',
-            'cart' => $cart
-        ]);
+        return response()->json(['message' => 'Menu dihapus', 'cart' => $cart]);
     }
 
-    // Show reservation booking form
     public function showReservasi()
     {
         $cart = session()->get('cart', []);
         if (empty($cart)) {
-            return redirect()->route('beranda')->with('error', 'Keranjang belanja Anda kosong.');
+            return redirect()->route('beranda')->with('error', 'Keranjang belanja kosong.');
         }
 
-        // Get available tables for today initially (default date)
         $tanggal = date('Y-m-d');
         $bookedTableIds = Reservasi::whereDate('tanggal_reservasi', $tanggal)
             ->whereIn('status', ['pending', 'confirmed'])
@@ -141,27 +144,21 @@ class CustomerController extends Controller
             return $table;
         });
 
-        return view('reservasi', [
-            'cart' => $cart,
-            'tables' => $tables
-        ]);
+        return view('reservasi', compact('cart', 'tables'));
     }
 
-    // Fetch available tables dynamically via ajax
     public function getAvailableTablesAjax(Request $request)
     {
         $jumlahOrang = $request->query('jumlah_orang');
         $tanggal = $request->query('tanggal_reservasi', date('Y-m-d'));
 
-        // Find tables booked on this date
         $bookedTableIds = Reservasi::whereDate('tanggal_reservasi', $tanggal)
             ->whereIn('status', ['pending', 'confirmed'])
             ->pluck('meja_id')
             ->toArray();
 
         $query = Meja::where('status', 'tersedia');
-
-        if ($request->has('jumlah_orang') && !empty($jumlahOrang)) {
+        if (!empty($jumlahOrang)) {
             $query->where('kapasitas', '>=', $jumlahOrang);
         }
 
@@ -173,127 +170,87 @@ class CustomerController extends Controller
         return response()->json($tables);
     }
 
-    // Store reservation to DB
     public function storeReservasi(Request $request)
     {
         $cart = session()->get('cart', []);
-        if (empty($cart)) {
-            return redirect()->route('beranda')->with('error', 'Keranjang belanja Anda kosong.');
-        }
+        if (empty($cart)) return redirect()->route('beranda');
 
-        $validator = Validator::make($request->all(), [
+        $request->validate([
             'tanggal_reservasi' => 'required|date|after_or_equal:today',
             'jumlah_orang' => 'required|integer|min:1',
             'meja_id' => 'required|exists:meja,meja_id',
         ]);
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
+        // Gunakan Database Transaction agar data konsisten jika stok gagal update
+        return DB::transaction(function () use ($request, $cart) {
+            $meja = Meja::findOrFail($request->meja_id);
+            
+            $isBooked = Reservasi::whereDate('tanggal_reservasi', $request->tanggal_reservasi)
+                ->where('meja_id', $request->meja_id)
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->exists();
 
-        $meja = Meja::findOrFail($request->meja_id);
-        if ($meja->status !== 'tersedia') {
-            return back()->withErrors(['meja_id' => 'Meja yang dipilih tidak aktif atau tidak tersedia.'])->withInput();
-        }
+            if ($isBooked) return back()->withErrors(['meja_id' => 'Meja sudah dipesan.']);
 
-        // Validate table is not booked on this date
-        $isBooked = Reservasi::whereDate('tanggal_reservasi', $request->tanggal_reservasi)
-            ->where('meja_id', $request->meja_id)
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->exists();
-        if ($isBooked) {
-            return back()->withErrors(['meja_id' => 'Meja yang dipilih sudah dipesan pada tanggal tersebut.'])->withInput();
-        }
-
-        // Calculate total harga and validate menu stock
-        $totalHarga = 0;
-        $orderItemsData = [];
-
-        foreach ($cart as $item) {
-            $menu = Menu::findOrFail($item['menu_id']);
-            if ($menu->stok < $item['qty']) {
-                return back()->withErrors([
-                    'tanggal_reservasi' => 'Stok untuk menu "' . $menu->nama_menu . '" tidak mencukupi. Tersedia: ' . $menu->stok
-                ])->withInput();
+            $totalHarga = 0;
+            foreach ($cart as $item) {
+                $menu = Menu::lockForUpdate()->findOrFail($item['menu_id']);
+                if ($menu->stok < $item['qty']) {
+                    return back()->withErrors(['error' => "Stok $menu->nama_menu habis."]);
+                }
+                $totalHarga += ($menu->harga * $item['qty']);
             }
 
-            $subtotal = $menu->harga * $item['qty'];
-            $totalHarga += $subtotal;
-
-            $orderItemsData[] = [
-                'menu' => $menu,
-                'qty' => $item['qty'],
-                'harga' => $menu->harga,
-                'subtotal' => $subtotal
-            ];
-        }
-
-        // Create Reservasi
-        $reservasi = Reservasi::create([
-            'user_id' => Auth::user()->user_id,
-            'meja_id' => $meja->meja_id,
-            'tanggal_reservasi' => $request->tanggal_reservasi,
-            'jumlah_orang' => $request->jumlah_orang,
-            'status' => 'pending',
-            'total_harga' => $totalHarga
-        ]);
-
-        // Create Order Items and update menu stocks
-        foreach ($orderItemsData as $data) {
-            OrderItem::create([
-                'reservasi_id' => $reservasi->reservasi_id,
-                'menu_id' => $data['menu']->menu_id,
-                'jumlah' => $data['qty'],
-                'harga' => $data['harga'],
-                'subtotal' => $data['subtotal']
+            $reservasi = Reservasi::create([
+                'user_id' => Auth::id(),
+                'meja_id' => $meja->meja_id,
+                'tanggal_reservasi' => $request->tanggal_reservasi,
+                'jumlah_orang' => $request->jumlah_orang,
+                'status' => 'pending',
+                'total_harga' => $totalHarga
             ]);
 
-            $menu = $data['menu'];
-            $menu->stok = max(0, $menu->stok - $data['qty']);
-            $menu->save();
-        }
+            foreach ($cart as $item) {
+                $menu = Menu::find($item['menu_id']);
+                OrderItem::create([
+                    'reservasi_id' => $reservasi->reservasi_id,
+                    'menu_id' => $menu->menu_id,
+                    'jumlah' => $item['qty'],
+                    'harga' => $menu->harga,
+                    'subtotal' => $menu->harga * $item['qty']
+                ]);
+                $menu->decrement('stok', $item['qty']);
+            }
 
-        session()->forget('cart');
-        return redirect()->route('pembayaran')->with('success', 'Reservasi berhasil dibuat. Silakan lakukan pembayaran.');
+            session()->forget('cart');
+            return redirect()->route('pembayaran')->with('success', 'Reservasi berhasil.');
+        });
     }
 
-    // Show payments and reservations dashboard for customer
     public function showPembayaran()
     {
         $reservations = Reservasi::with(['meja', 'order_items.menu', 'pembayaran', 'feedback'])
-            ->where('user_id', Auth::user()->user_id)
+            ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return view('pembayaran', [
-            'reservations' => $reservations
-        ]);
+        return view('pembayaran', compact('reservations'));
     }
 
-    // Store payment upload to DB
     public function storePembayaran(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
+        $request->validate([
             'metode' => 'required|in:tunai,qris',
             'bukti_bayar' => 'required_if:metode,qris|image|max:2048'
         ]);
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator);
-        }
-
         $reservasi = Reservasi::findOrFail($id);
-
-        if ($reservasi->pembayaran) {
-            return back()->with('error', 'Pembayaran untuk reservasi ini sudah dilakukan.');
-        }
+        if ($reservasi->pembayaran) return back()->with('error', 'Sudah dibayar.');
 
         $buktiBayarPath = null;
         if ($request->metode === 'qris' && $request->hasFile('bukti_bayar')) {
-            $file = $request->file('bukti_bayar');
-            $filename = time() . '_' . $id . '.' . $file->getClientOriginalExtension();
-            $file->storeAs('bukti_bayar', $filename, 'public');
-            $buktiBayarPath = 'bukti_bayar/' . $filename;
+            $path = $request->file('bukti_bayar')->store('bukti_bayar', 'public');
+            $buktiBayarPath = $path;
         }
 
         Pembayaran::create([
@@ -304,35 +261,27 @@ class CustomerController extends Controller
             'tanggal_bayar' => now()
         ]);
 
-        return redirect()->route('pembayaran')->with('success', 'Bukti pembayaran berhasil dikirim.');
+        return redirect()->route('pembayaran')->with('success', 'Bukti terkirim.');
     }
 
-    // Store feedback rating/comment to DB
     public function storeFeedback(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
+        $request->validate([
             'rating' => 'required|integer|min:1|max:5',
             'komentar' => 'required|string',
         ]);
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator);
-        }
-
         $reservasi = Reservasi::findOrFail($id);
-
-        if ($reservasi->feedback) {
-            return back()->with('error', 'Anda sudah memberikan feedback untuk reservasi ini.');
-        }
+        if ($reservasi->feedback) return back()->with('error', 'Feedback sudah ada.');
 
         Feedback::create([
             'reservasi_id' => $reservasi->reservasi_id,
-            'user_id' => Auth::user()->user_id,
+            'user_id' => Auth::id(),
             'rating' => $request->rating,
             'komentar' => $request->komentar,
             'tanggal' => now()
         ]);
 
-        return redirect()->route('pembayaran')->with('success', 'Feedback berhasil dikirim. Terima kasih!');
+        return redirect()->route('pembayaran')->with('success', 'Terima kasih atas feedbacknya!');
     }
 }

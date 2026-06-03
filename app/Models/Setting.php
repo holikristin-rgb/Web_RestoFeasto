@@ -10,6 +10,8 @@ class Setting extends Model
     use HasFactory;
 
     protected $table = 'settings';
+    
+    // Karena Anda menggunakan string 'key' sebagai primary key
     protected $primaryKey = 'key';
     public $incrementing = false;
     protected $keyType = 'string';
@@ -20,16 +22,17 @@ class Setting extends Model
     ];
 
     /**
-     * Get a setting value by key, fallback to default if not found.
+     * Mengambil nilai setting berdasarkan key.
      */
     public static function getValue(string $key, $default = null)
     {
-        $setting = static::find($key);
+        // static::find($key) akan mencari berdasarkan primary key 'key'
+        $setting = static::where('key', $key)->first();
         return $setting ? $setting->value : $default;
     }
 
     /**
-     * Set a setting value by key.
+     * Menyimpan atau memperbarui nilai setting.
      */
     public static function setValue(string $key, $value)
     {
